@@ -298,6 +298,12 @@ def parse_args(options)
         opts.on('-t', '--timeout SECONDS', 'Wait before HTTP timeout.') do |x|
             options[:timeout] = x.to_i
         end
+
+        options[:result_lower_than] = nil
+        opts.on('-l', '--result_lower_than INT', 'Expected int result. No need for -w or -c.') do |x|
+            options[:result_lower_than] = x
+        end
+
     end
 
     optparse.parse!
@@ -333,7 +339,7 @@ def sanity_check(options)
         error_msg.push('Delimiter must be a single character.')
     end
 
-    if not ((options[:result_string] or options[:result_regex]) or (options[:warn] and options[:crit]) or (options[:result_string_warn] and options[:result_string_crit])) then
+    if not ((options[:result_string] or options[:result_regex] or options[:result_lower_than]) or (options[:warn] and options[:crit]) or (options[:result_string_warn] and options[:result_string_crit])) then
         error_msg.push('Must specify an expected result OR the warn and crit thresholds.')
     end
 
@@ -417,6 +423,17 @@ if options[:element_regex] then
 end
 
 say(options[:v], 'The value of %s is %s' % [options[:element], json_flat[options[:element]]])
+
+# If we're looking for a int lower than...
+if options[:result_lower_than] then
+    if json_flat[options[:element]].to_i < options[:result_lower_than].to_i then
+        msg = 'OK: %s is %s' % [options[:element], json_flat[options[:element]]]
+        do_exit(options[:v], 0, msg)
+    else
+        msg = 'CRIT: %s is %s' % [options[:element], json_flat[options[:element]]]
+        do_exit(options[:v], 2, msg)
+    end
+end
 
 # If we're looking for a string...
 if options[:result_string] then
